@@ -1,0 +1,91 @@
+//  ========================================================================
+//  AUTHOR:  Ramakrishnan Mukundan
+//  BOOK:    Advanced Methods in Computer Graphics
+//           - With examples in OpenGL,  Springer, 2012.
+//
+//  FILE NAME: Mesh.h
+//  DESCRIPTION:
+//        This code is part of the supplementary material for Chapter 8
+//	      (Ref. Page 226)
+//        This is the header file for the Mesh class.
+//  ========================================================================
+//  THE SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS",  WITHOUT WARRANTY OF ANY
+//  KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+//  MERCHANTABILITY, FITNESS FOR A  PARTICULAR PURPOSE AND  NONINFRINGEMENT.
+//  IN NO EVENT SHALL  THE AUTHOR OR THE PUBLISHER BE LIABLE FOR  ANY CLAIM,
+//  DAMAGES OR  OTHER LIABILITY,  WHETHER IN AN  ACTION OF CONTRACT, TORT OR
+//  OTHERWISE, ARISING FROM,  OUT OF OR  IN CONNECTION  WITH THE SOFTWARE OR
+//  THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//  ========================================================================
+
+#if !defined(H_MESH)
+#define H_MESH
+
+#include <vector>
+#include <list>
+#include <string>
+using namespace std;
+
+struct Polygon
+{
+	int vert[4];
+};
+struct HE_vert;
+struct HE_face;
+
+struct HE_edge
+{
+  HE_vert* vert;
+  HE_face* face;
+  HE_edge* next;
+  HE_edge* prev;
+  HE_edge* pair;
+};
+
+struct HE_vert
+{
+  float x;
+  float y;
+  float z;
+  int index;
+  HE_edge* edge;
+};
+
+struct HE_face
+{
+  HE_edge* edge;
+  int index;
+};
+
+class Mesh
+{
+public:
+    enum PolyType {TRIANGLE, QUAD};
+	PolyType _polytype;
+	int _numVert, _numPoly;
+	vector<Polygon*> _polygons;
+    vector<HE_vert*> _vertArray;
+    list<HE_face*> _faceList;
+    list<HE_edge*> _edgeList;
+	Mesh(PolyType polytype)
+		: _polytype(polytype), _numVert(0), _numPoly(0)
+	      {}
+	~Mesh() {}
+	int loadMeshOFF(const string& filename);
+	int loadMeshOBJ(const string& filename);
+	void loadMeshPLY(char* filename);
+	void render();
+	void triangulation();
+	void renderBV(float& xmin, float& xmax,
+		float& ymin, float& ymax, float& zmin, float& zmax);
+	void setColorAmbientDiffuse(float colorR, float colorG, float colorB) const;
+	void setColorSpecular(float colorR, float colorG, float colorB, float shininess) const;
+    void boundingVolume(float& xmin, float& xmax,
+		float& ymin, float& ymax, float& zmin, float& zmax);
+	void normal(HE_vert* p1, HE_vert* p2, HE_vert* p3) const;
+	void createEdgeStruct();
+	void createEdgePairs();
+	vector<int> oneRingNbs(int vIndx) const;
+};
+
+#endif

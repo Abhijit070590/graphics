@@ -1,0 +1,93 @@
+#include <iostream>
+#include <fstream>
+#include "../Headers/Mesh.h"
+#include <GL/glut.h>
+#include <GL/glui.h>
+using namespace std;
+
+Mesh *mesh,*cmesh;
+int numVert;
+int meshControl = 1 ;
+int level = 0;  //subdivision level
+
+float lookAngle_x = 45.0, lookAngle_y = -10.0;
+
+float view_rotate[16]={1,0,0,0, 0,1,0,0 ,0,0,1,0 ,0,0,0,1};
+GLUI *glui;
+GLUI_Rotation *rotate;
+
+//-- A temperorary structure ---
+
+
+//---- Function to subdivide the mesh ---------------------------------------------
+//---- Call this function for each iteration --------------------------------------
+
+//---Reads data file and initializes drawing parameters ------------------
+void initialise(char *filename,char *cfilename)
+{
+	mesh = new Mesh();
+	mesh->loadMeshPLY(filename);
+	mesh->createEdgeStruct();
+	cmesh = new Mesh();
+	cmesh->loadMeshPLY(cfilename);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_DEPTH_TEST);
+
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(-2., 2., -2., 2., -2., 2.);
+}
+
+//---- Display:  The main display module ----------------------------------
+void display()
+{
+    float lgt_pos[]={5.0f, 10.0f, 10.0f, 1.0f};
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+    glLightfv(GL_LIGHT0, GL_POSITION, lgt_pos);
+
+	glRotatef(lookAngle_y, 0, 1, 0);
+	glRotatef(lookAngle_x, 1, 0, 0);
+	glColor3f(1.,0.,0.);
+	if(meshControl == 1)
+	mesh->render();
+	if(meshControl == 0)
+		cmesh->render();
+	glFlush();
+}
+
+//-- Callback function for processing keyboard events --------------------
+void keyboard(unsigned char key, int x, int y)
+{
+
+	 if(key == 'w' || key == 'W') {meshControl = 0;}
+	else if(key == 's' || key == 'S') {meshControl = 1;}
+	glutPostRedisplay();
+}
+
+//-- Callback function for processing special keyboard events --------------
+void special(int key, int x, int y)
+{
+
+	glutPostRedisplay();
+}
+
+//------- Main: Initialize glut window and register call backs -------------
+int main(int argc, char** argv)
+{
+   glutInit(&argc, argv);
+   glutInitDisplayMode (GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH);
+   glutInitWindowSize (500, 500);
+   glutInitWindowPosition (10, 10);
+   glutCreateWindow ("Loop Subdivision");
+   initialise (argv[1],argv[1]);
+
+   glutDisplayFunc(display);
+   glutKeyboardFunc(keyboard);
+   glutSpecialFunc(special);
+   glutMainLoop();
+   return 0;
+}

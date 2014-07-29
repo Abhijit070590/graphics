@@ -1,0 +1,107 @@
+#include <iostream>
+#include <fstream>
+#include "../Headers/Mesh.h"
+#include <GL/glut.h>
+#include <Gl/glui.h>
+using namespace std;
+
+Mesh *mesh;
+int numVert;
+int level = 0;  //subdivision level
+vector<int> vertInd1, vertInd2, vertNewIndx;
+float lookAngle_x = 45.0, lookAngle_y = -10.0;
+
+//-- A temperorary structure ---
+struct faceNew
+{
+  int vi[3];
+};
+
+//---- Function to determine if a vertex has already been inserted on an edge ----
+int search(int i1, int i2)
+{
+    int size = vertInd1.size();
+    if(size == 0) return -1;
+    for(int i = 0;  i < size; i++)
+    {
+        if(vertInd1[i] == i2  && vertInd2[i] == i1) return vertNewIndx[i];
+    }
+    return -1;
+}
+
+//---- Function to subdivide the mesh ---------------------------------------------
+//---- Call this function for each iteration --------------------------------------
+
+//---Reads data file and initializes drawing parameters ------------------
+void initialise(char *filename,char *cfilename)
+{
+	mesh = new Mesh();
+	mesh->loadMeshPLY(filename);
+	mesh->createEdgeStruct();
+    mesh->setColorAmbientDiffuse(1.0, 0.5, 0.5);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_DEPTH_TEST);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(-2., 2., -2., 2., -2., 2.);
+}
+
+//---- Display:  The main display module ----------------------------------
+void display()
+{
+    float lgt_pos[]={5.0f, 10.0f, 10.0f, 1.0f};
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+    glLightfv(GL_LIGHT0, GL_POSITION, lgt_pos);
+
+	glRotatef(lookAngle_y, 0, 1, 0);
+	glRotatef(lookAngle_x, 1, 0, 0);
+	glColor3f(1.,0.,0.);
+
+	mesh->render();
+	glFlush();
+}
+
+//-- Callback function for processing keyboard events --------------------
+void keyboard(unsigned char key, int x, int y)
+{
+	if (key == ' ' && level < 4)
+	{
+		mesh->subdivide();
+		level++;
+	}
+	else if(key == 'w' || key == 'W') {glDisable(GL_LIGHTING); glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);}
+	else if(key == 's' || key == 'S') {glEnable(GL_LIGHTING); glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);}
+	glutPostRedisplay();
+}
+
+//-- Callback function for processing special keyboard events --------------
+void special(int key, int x, int y)
+{
+	if(key == GLUT_KEY_LEFT) lookAngle_y -= 5.0;
+	else if(key == GLUT_KEY_RIGHT) lookAngle_y += 5.0;
+	if(key == GLUT_KEY_UP) lookAngle_x -= 5.0;
+	else if(key == GLUT_KEY_DOWN) lookAngle_x += 5.0;
+	glutPostRedisplay();
+}
+
+//------- Main: Initialize glut window and register call backs -------------
+int main(int argc, char** argv)
+{
+   glutInit(&argc, argv);
+   glutInitDisplayMode (GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH);
+   glutInitWindowSize (500, 500);
+   glutInitWindowPosition (10, 10);
+   glutCreateWindow ("Loop Subdivision");
+   initialise (argv[1],argv[2]);
+
+   glutDisplayFunc(display);
+   glutKeyboardFunc(keyboard);
+   glutSpecialFunc(special);
+   glutMainLoop();
+   return 0;
+}

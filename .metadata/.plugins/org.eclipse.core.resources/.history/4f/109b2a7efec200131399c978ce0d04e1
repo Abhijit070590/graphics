@@ -1,0 +1,26 @@
+#include "../Headers/Mesh.h"
+
+int main(int argc, char** argv)
+{
+	Mesh *s = new Mesh();
+	s->loadMeshPLY(argv[1]);
+	s->triangulate();
+	s->createEdgeStruct();
+	s->subdivide();
+	return 0;
+}
+
+//if(nsize == 3)
+//        {
+//        	wt2 = 0.1875;
+//        	wt1 = 0.4375;
+//        }
+//        else
+//        {
+//        	wt2 = 0.375 / (float)nsize;
+//        	wt1 = 1.0 - (float)nsize * wt2;
+//        }
+//		vert1 = _vertArray[i];
+//		sumx = wt1*(vert1->x);
+//		sumy = wt1*(vert1->y);
+//		sumz = wt1*(vert1->z);

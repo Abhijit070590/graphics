@@ -1,0 +1,71 @@
+#ifndef MESH_H
+#define MESH_H
+#include <vector>
+#include <list>
+using namespace std;
+struct Vertex;
+struct Face;
+struct Edge
+{
+
+  	Vertex* svert;
+  	Vertex* evert;
+	Face* face;
+  	Edge* next;
+  	Edge* prev;
+  	Edge* pair;
+};
+
+struct Vertex
+{
+
+	float x;
+	float y;
+	float z;
+	int index;
+	Edge* edge;
+};
+
+struct Face
+{
+
+  Edge* edge;
+  int index;
+};
+
+struct Polygon
+{
+	int vert[6];
+};
+
+class Mesh
+{
+private:
+
+	int _polySize;
+	int _numVert, _numPoly;
+	vector<Polygon*> _polygons;
+    vector<Vertex*> _vertArray;
+    list<Face*> _faceList;
+    list<Edge*> _edgeList;
+    vector<int> vertInd1;
+    vector<int> vertInd2;
+    vector<int> vertNewIndx;
+    vector< vector<int> > vRingNbs;
+public:
+	Mesh()
+		:_polySize(0), _numVert(0), _numPoly(0)
+	      {}
+	~Mesh() {}
+	void loadMeshPLY(char* filename);
+	void triangulate();
+	void render();
+	void normal(Vertex* p1, Vertex* p2, Vertex* p3) const;
+	void createEdgeStruct();
+	void createEdgePairs();
+	void oneRingNbs();
+	void subdivide();
+	int search(int i1, int i2);
+};
+
+#endif

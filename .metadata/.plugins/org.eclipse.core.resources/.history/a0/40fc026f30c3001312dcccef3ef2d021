@@ -1,0 +1,525 @@
+#include <iostream>
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include <GL/glut.h>
+#include <vector>
+#include <algorithm>
+#include <cstring>
+#include <cstdio>
+#include <cstdlib>
+#include "../Header/Mesh.h"
+#include "../Header/Vector.h"
+using namespace std;
+void Vertex::set_coords(float x1,float y1,float z1)
+{
+        x=x1;
+        y=y1;
+        z=z1;
+}
+vector<float> Vertex::get_coords()
+{
+        vector<float> coords;
+        coords.push_back(x);
+        coords.push_back(y);
+        coords.push_back(z);
+        return coords;
+}
+
+
+
+void Edge::set_vertex(Vertex v1,Vertex v2)
+{
+	vertices.push_back(v1);
+	vertices.push_back(v2);
+}
+
+vector<Vertex> Edge::get_vertex()
+{
+	return vertices;
+}
+
+void Edge::add_opposite(Vertex v)
+{
+	opposites.push_back(v);
+
+}
+
+vector<Vertex> Edge::get_opposites(){
+	return opposites;
+}
+
+void Face::addVertexIndex(int index)
+{
+	vertex_indices.push_back(index);
+
+}
+
+vector<int> Face::getVertexIndices(){
+	
+	return vertex_indices;
+}
+
+unsigned int Mesh::get_num_ver()
+{
+	return num_ver;
+}
+unsigned int Mesh::get_num_face()
+{
+	return num_face;
+}
+
+unsigned int Mesh::get_num_edges()
+{
+	return num_edges;
+}
+
+void Mesh::set_num_ver(unsigned int value)
+{
+	num_ver = value;
+}
+
+void Mesh::set_num_edges(unsigned int value)
+{
+	num_edges=value;
+
+}
+
+void Mesh::set_num_face(unsigned int value)
+{
+	num_face = value;
+
+}
+
+void Mesh::load_mesh(char* filename)
+{
+	  FILE *file = fopen(filename,"r");
+	  char str[300];
+	  unsigned int num;
+	  while (  strncmp( "element vertex", str,strlen("element vertex")) != 0  )
+	  			{
+	  				fgets(str,300,file);
+	  			}
+	  strcpy(str, str+strlen("element vertex"));
+	  sscanf(str,"%i", &num);
+	  set_num_ver(num);
+	  while (  strncmp( "element face", str,strlen("element face")) != 0  )
+	  			{
+	  				fgets(str,300,file);			// format
+	  			}
+	  strcpy(str, str+strlen("element face"));
+	  sscanf(str,"%i", &num);
+	  set_num_face(num);
+	  while (  strncmp( "end_header", str,strlen("end_header")) != 0  )
+	  			{
+	  				fgets(str,300,file);			// format
+	  			}
+	  for(int i=0;i<num_ver;i++)
+	  		{
+	  			fgets(str,300,file);
+	  			Vertex temp;
+	  			float x,y,z;
+	  			sscanf(str,"%f %f %f",&x , &y , &z);
+	  			cout << x <<" " <<y <<" "<<z<<endl;
+	  			temp.set_coords(x,y,z);
+	  			vertices.push_back(temp);
+	  		}
+	  int point = 0;
+	  fgets(str,300,file);
+	  sscanf(str,"%d " ,&polygon_size);
+
+	  cout << "polygon "<<polygon_size<<endl;
+
+	  do
+	  {
+		  cout << point <<endl;
+		  Face temp;
+		  int pos[6];
+
+		  if(polygon_size == 4)
+		  {
+
+			  sscanf(str,"%d %d %d %d %d",&polygon_size,&pos[0],&pos[1],&pos[2],&pos[3]);
+
+			  printf("faces %d %d %d %d %d\n",polygon_size,pos[0],pos[1],pos[2],pos[3]);
+			  temp.addVertexIndex(pos[0]);
+			  temp.addVertexIndex(pos[1]);
+			  temp.addVertexIndex(pos[2]);
+			  temp.addVertexIndex(pos[3]);
+		  }
+		  if(polygon_size == 5)
+		  {
+			  sscanf(str,"%d %d %d %d %d %d",&polygon_size,&pos[0],&pos[1],&pos[2],&pos[3],&pos[4]);
+
+			  printf("faces %d %d %d %d %d",polygon_size,pos[0],pos[1],pos[2],pos[3],pos[4]);
+			  temp.addVertexIndex(pos[0]);
+			  temp.addVertexIndex(pos[1]);
+			  temp.addVertexIndex(pos[2]);
+			  temp.addVertexIndex(pos[3]);
+			  temp.addVertexIndex(pos[4]);
+		  }
+		  faces.push_back(temp);
+		  fgets(str,300,file);
+		  point++;
+	  }while(point<6 && !feof(file));
+	  fclose(file);
+	cout << "faces"<<faces.size();
+}
+
+void Mesh::triangulation()
+{	vector<Face> temp;
+	if(polygon_size == 4)
+	{
+		for(int i=0;i<faces.size();i++)
+		{
+			vector<int> use;
+			use = faces[i].getVertexIndices();
+			Face f1,f2;
+
+			f1.addVertexIndex(use[0]);
+			f1.addVertexIndex(use[1]);
+			f1.addVertexIndex(use[2]);
+
+			f2.addVertexIndex(use[0]);
+			f2.addVertexIndex(use[2]);
+			f2.addVertexIndex(use[3]);
+
+			temp.push_back(f1);
+			temp.push_back(f2);
+
+		}
+	}
+	if(polygon_size == 5)
+	{
+		for(int i=0;i<faces.size();i++)
+				{
+			vector<int> use;
+						use = faces[i].getVertexIndices();
+						Face f1,f2,f3;
+
+						f1.addVertexIndex(use[0]);
+						f1.addVertexIndex(use[1]);
+						f1.addVertexIndex(use[2]);
+
+						f2.addVertexIndex(use[0]);
+						f2.addVertexIndex(use[2]);
+						f2.addVertexIndex(use[3]);
+
+						f3.addVertexIndex(use[0]);
+						f3.addVertexIndex(use[3]);
+						f3.addVertexIndex(use[4]);
+						temp.push_back(f1);
+						temp.push_back(f2);
+						temp.push_back(f3);
+
+
+				}
+	}
+	faces.clear();
+	faces = temp;
+	num_face = temp.size();
+}
+
+void Mesh::make_edges()
+{	int edge_count=0;
+	cout << "Inside make_edges";
+	for(int i=0;i<num_face;i++)
+	{
+		vector<int> fv;
+		fv = faces[i].getVertexIndices();
+		Edge e1,e2,e3;
+
+		e1.set_vertex(vertices[fv[0]],vertices[fv[1]]);
+		int pos = find_edge(e1);
+		if(pos!=(-1))
+		{
+			faces[i].addEdgeIndex(pos);
+			edges[pos].add_opposite(vertices[fv[2]]);
+		}
+		else
+			{
+			e1.add_opposite(vertices[fv[2]]);
+			edges.push_back(e1);
+			faces[i].addEdgeIndex(edge_count++);
+			}
+
+
+		e2.set_vertex(vertices[fv[1]],vertices[fv[2]]);
+		pos = find_edge(e2);
+		if(pos!=(-1))
+		{
+			faces[i].addEdgeIndex(pos);
+			edges[pos].add_opposite(vertices[fv[0]]);
+		}
+		else
+		{
+			e2.add_opposite(vertices[fv[0]]);
+			edges.push_back(e2);
+			faces[i].addEdgeIndex(edge_count++);
+		}
+
+		e3.set_vertex(vertices[fv[0]],vertices[fv[2]]);
+		pos = find_edge(e1);
+		if(pos!=(-1)){
+			edges[pos].add_opposite(vertices[fv[1]]);
+			faces[i].addEdgeIndex(pos);
+		}
+
+		else
+			{
+			e3.add_opposite(vertices[fv[1]]);
+			edges.push_back(e3);
+			faces[i].addEdgeIndex(edge_count++);
+			}
+
+	}
+	num_edges = edge_count;
+	cout << edges.size();
+}
+int Mesh::find_edge(Edge e)
+		{
+	    int pos1=-1;
+		for(int i=0;i<edges.size();i++)
+		{
+			vector<Vertex> v;
+			vector<Vertex> ve;
+			ve = e.get_vertex();
+			v= edges[i].get_vertex();
+			if((find(v.begin(),v.end(),ve[0])!=v.end())&&(find(v.begin(),v.end(),ve[1])!=v.end()))
+			{
+				pos1=i;
+			}
+		}
+		return pos1;
+		}
+
+void Mesh::make_neighbours()
+{
+	for(int i=0;i<num_ver;i++)
+	{
+		vector<Vertex> nghbr;
+		cout<<"\n"<<num_edges<<endl;
+		for(int j=0;j<num_edges;i++)
+		{
+			vector<Vertex> ev;
+			ev=edges[j].get_vertex();
+			cout << ev[0].get_x()<<" "<<ev[0].get_y()<<" "<<ev[0].get_z();
+			if(ev[0]==vertices[i])
+				nghbr.push_back(ev[1]);
+			else
+				nghbr.push_back(ev[0]);
+		}
+		cout << "next" << endl;
+		neighbours.push_back(nghbr);
+	}
+}
+int Mesh::find_vertex(vector<Vertex> ee, vector<Vertex> ef)
+{
+	int pos;
+	for(int i=0;i<3;i++)
+			if(find(ee.begin(),ee.end(),ef[i])==ee.end())
+				pos= i;
+	return pos;
+}
+vector<int> Mesh::find_ad_vertex(int index,int  face)
+{
+	vector<int> edi = faces[face].getEdgeIndices();
+ 	vector<int> target;
+	for(int i=0;i<3;i++)
+	{ 
+		vector<Vertex> oppo = edges[edi[i]].get_opposites();
+		for(int j=0;j<2;j++)
+			{
+				
+			if(oppo[j] != vertices[index])
+				target.push_back(edi[i]);
+
+			}
+		}
+	return target;
+}
+void Mesh::subdivide()
+{
+	cout << "Inside ";
+	vector<Vertex> vnew;
+	//making the new vertices;
+	for(int i=0;i<num_edges;i++)
+	{
+		vector<Vertex> edge_vertices;
+		edge_vertices = edges[i].get_vertex();
+		vector<Vertex> edge_opposites;
+		edge_opposites = edges[i].get_opposites();
+		Vertex v ;
+		float x,y,z;
+		x = (edge_vertices[0].get_x()*0.375)+(edge_vertices[1].get_x()*0.375) + (edge_opposites[0].get_x()*0.125) + (edge_opposites[1].get_x() * 0.125);
+		y = (edge_vertices[0].get_y()*0.375)+(edge_vertices[1].get_y()*0.375) + (edge_opposites[0].get_y()*0.125) + (edge_opposites[1].get_y() * 0.125);
+		z = (edge_vertices[0].get_z()*0.375)+(edge_vertices[1].get_z()*0.375) + (edge_opposites[0].get_z()*0.125) + (edge_opposites[1].get_z() * 0.125);
+		v.set_coords(x,y,z);
+		vnew.push_back(v);
+	}
+	//modifying the existing vertices
+	vector<Vertex> vexisting;
+	for(int i=0;i<num_ver;i++)
+	{
+		Vertex vn;
+		float x,y,z;
+		int wt1,wt2;
+		vector<Vertex> ngh = get_neighbours(i);
+		int nsize ;
+		nsize = ngh.size();
+		if(nsize == 3)
+		{
+        	wt2 = 0.1875;
+       	wt1 = 0.4375;
+        }
+        else
+        {
+        	wt2 = 0.375 / (float)nsize;
+        	wt1 = 1.0 - (float)nsize * wt2;
+        }
+
+		
+		x = (vertices[i].get_x()*(wt1));
+		for(int j=0; j< ngh.size();j++ )
+		{
+			x = x + (ngh[j].get_x()*wt2);
+		}
+		y = (vertices[i].get_y()*wt1);
+		for(int j=0; j< ngh.size();j++ )
+			{
+				y = y + (ngh[j].get_y()*wt2);
+			}
+		z = (vertices[i].get_z()*wt1);
+		for(int j=0; j< ngh.size();j++ )
+			{
+				z = z + (ngh[j].get_z()*wt2);
+			}
+		vexisting.push_back(vn);
+	}
+	//retriangulation
+	int face_count;
+	vector<Face> fnew;
+	for(int i=0;i<num_face;i++)
+	{
+		vector<int> edi = faces[i].getEdgeIndices();
+		vector<int> vdi = faces[i].getVertexIndices();
+		Face f1,f2,f3,f4;
+
+		f1.addVertexIndex(edi[0]);
+		f1.addVertexIndex(edi[1]);
+		f1.addVertexIndex(edi[2]);
+
+		fnew.push_back(f1);
+
+		f2.addVertexIndex(edi[0]);
+		vector<int> adver = find_ad_vertex(edi[0],i);
+		f2.addVertexIndex(adver[0]+vnew.size());
+		f2.addVertexIndex(adver[1]+vnew.size());
+		fnew.push_back(f2);
+
+		adver.clear();
+		f3.addVertexIndex(edi[1]);
+		adver = find_ad_vertex(edi[1],i);
+		f3.addVertexIndex(adver[0]+vnew.size());
+		f3.addVertexIndex(adver[1]+vnew.size());
+		fnew.push_back(f3);
+
+		adver.clear();
+		f4.addVertexIndex(edi[2]);
+		adver = find_ad_vertex(edi[2],i);
+		f4.addVertexIndex(adver[0]+vnew.size());
+		f4.addVertexIndex(adver[1]+vnew.size());
+		fnew.push_back(f4);
+
+
+
+	}
+	faces.clear();
+	faces = fnew;
+	vertices.clear();
+	vertices = vnew;
+	vertices.insert(vertices.end(),vexisting.begin(),vexisting.end());
+	edges.clear();
+	make_edges();
+	cout << faces.size() <<"  "<< edges.size(); 
+}
+void Mesh::calculate_normals()
+{
+	Normals = new float*[num_ver];
+	for(int i=0;i<num_ver;i++)
+		Normals[i] = new float[3];
+ struct VerNorm{
+float x;
+float y;
+float z;
+float n;
+};
+struct FacNorm{
+float x;
+float y;
+float z;
+};
+VerNorm *vnorm;
+FacNorm *fnorm;
+
+vnorm = new VerNorm[num_ver];
+fnorm = new FacNorm[num_face];
+for(int fCnt=0;fCnt<num_face;fCnt++)
+{
+		vector<int> vindices = faces[fCnt].getVertexIndices();
+		Vector V1=Vector(vertices[vindices[0]].get_x(),vertices[vindices[0]].get_y(),vertices[vindices[0]].get_z());
+		Vector V2=Vector(vertices[vindices[1]].get_x(),vertices[vindices[1]].get_y(),vertices[vindices[1]].get_z());
+		Vector V3=Vector(vertices[vindices[2]].get_x(),vertices[vindices[2]].get_y(),vertices[vindices[2]].get_z());
+		Vector Vadd=sub(V1,V2);
+	Vector Vsub=sub(V1,V3);
+	
+	Vector Cross=cross_product(Vadd,Vsub);
+	
+	
+	float val  = Cross.norm();
+
+	fnorm[fCnt].x = Cross.getX()/val;
+	fnorm[fCnt].y = Cross.getY()/val;
+	fnorm[fCnt].z = Cross.getZ()/val;
+	
+	
+	vnorm[vindices[0]].x+=fnorm[fCnt].x;
+	vnorm[vindices[1]].x+=fnorm[fCnt].x;
+	vnorm[vindices[2]].x+=fnorm[fCnt].x;
+	
+	
+	vnorm[vindices[0]].y+=fnorm[fCnt].y;
+	vnorm[vindices[1]].y+=fnorm[fCnt].y;
+ 	vnorm[vindices[2]].y+=fnorm[fCnt].y;
+
+	vnorm[vindices[0]].z+=fnorm[fCnt].z;
+	vnorm[vindices[1]].z+=fnorm[fCnt].z;
+	vnorm[vindices[2]].z+=fnorm[fCnt].z;
+	
+	vnorm[vindices[0]].n+=1.0;
+	vnorm[vindices[1]].n+=1.0;
+ 	vnorm[vindices[2]].n+=1.0;
+ 	
+}
+	for(int i=0;i<num_ver;i++)
+	{
+		Normals[i][0] = vnorm[i].x/vnorm[i].n;
+		Normals[i][1] = vnorm[i].y/vnorm[i].n;
+		Normals[i][2] = vnorm[i].z/vnorm[i].n;
+	}
+}
+ void Mesh::draw()
+ {
+	 calculate_normals();
+	 for(int i=0;i<num_face;i++)
+	 {
+		 vector<int> indices = faces[i].getVertexIndices();
+		 glBegin(GL_TRIANGLES);
+		 for(int j=0;j<polygon_size;j++)
+		 {
+			// glNormal3f(Normals[indices[j]][0],Normals[indices[j]][1],Normals[indices[j]][2]);
+			 glVertex3f(vertices[indices[j]].get_x(),vertices[indices[j]].get_y(),vertices[indices[j]].get_z());
+		 }glEnd();
+		 
+	 }
+	 
+}

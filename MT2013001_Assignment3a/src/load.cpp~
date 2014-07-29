@@ -1,0 +1,659 @@
+#include <iostream>
+#include <cstdlib>
+#include <cstdio>
+#include <GL/glut.h>
+#include <cmath>
+#include <cstring>
+#include "../Header/quaternion.h"
+#include "../Header/Vector.h"
+#include <SOIL/SOIL.h>
+
+using namespace std;
+typedef struct _vertex
+{
+float x;
+float y;
+float z;
+float confidence;
+float intensity;
+}Vertex;
+typedef struct _face{
+int v1;
+int v2;
+int v3;
+}Face;
+typedef struct _verNorm{
+float x;
+float y;
+float z;
+float n;
+}VerNorm;
+typedef struct _facNorm{
+float x;
+float y;
+float z;
+}FacNorm;
+
+Vertex *vertices;
+Face *faces;
+VerNorm *vnorm;
+int number_of_vertices,number_of_faces,flag2=0,lflag=0,shading=0;
+FacNorm *fnorm;
+Vertex origin;
+GLuint textureIDSkin;
+
+float imageSize;
+int imgWidth, imgHeight;
+
+unsigned char* skinImg;
+
+int callback_set;
+float previous_time, current_time;
+
+//Scaling Variable
+float zoom = 1;
+
+//Sign variable for pitch value change
+int op = 1;
+
+//Angles
+float yaw = 1;
+float lightPitch = 0, pitch = 0;
+
+float cameraDistance = 2;
+
+//Mouse Button ref
+int LeftButtonDown = 0;
+int MiddleButtonDown = 0;
+int ShiftLeftButtonDown = 0;
+
+//Variables for Change in mouse position
+int oldX=1, oldY=1, newX = 1, newY = 1;
+
+//Variable for displacement of mouse
+float moveX = 0, moveY = 0;  
+
+//variable to store maximum value of Z coordinate in given dataset
+float maxZ = -100.0, maxX = -100.0, maxY = -100.0, minX = 0.0, minY = 0.0, minZ = 0.0;
+
+
+//Boolean variables
+GLenum linePoly = GL_FALSE;
+GLenum pointDraw = GL_FALSE;
+GLenum backColor = GL_FALSE;
+GLenum withLight = GL_TRUE;
+int usePerVertexNormals = GL_TRUE;
+int automaticRotate = GL_TRUE;
+//Window size
+int windW = 800, windH = 600;
+
+int shade_model = GL_SMOOTH;
+
+//String for storing light names
+char *left_light, *right_light, *front_light, fileName[30];
+
+
+/***********************************************light*************************************************/
+enum {
+			LIGHT_OFF, LIGHT_RED, LIGHT_WHITE, LIGHT_GREEN
+		} LightValues;
+
+		GLfloat leftLightX = -10.0;
+		GLfloat leftLightZ = 10.0;
+		GLfloat rightLightX = 10.0;
+		GLfloat rightLightZ = -10.0;
+
+		GLfloat red_light[] = { 1.0, 0.0, 0.0, 1.0 }, green_light[] = { 0.0, 1.0, 0.0, 1.0 }, white_light[] = { 1.0, 1.0, 1.0, 1.0 };
+
+		GLfloat left_light_position[] = { 10.0, 0.0, -5.0, 0.0 }, right_light_position[] = { -10.0, 0.0, -5.0, 1.0 }, front_light_position[] = { 0.0, 0.0, -10.0, 1.0 };
+
+		GLfloat white_ambient[] = { 0.2, 0.2, 0.2, 1.0 }, white_diffuse[] = { 0.5, 0.5, 0.5, 1.0 }, white_specular[] = { 0.3, 0.3, 0.3, 1.0 }, white_shininess = 50.0;
+/*****************************************************Calculating Normals*****************************************/
+
+void calculateNormal(int fCnt,Vertex v1,Vertex v2,Vertex v3)
+{
+	
+	Vector V1=Vector(v1.x,v1.y,v1.z);
+	Vector V2=Vector(v2.x,v2.y,v2.z);
+	Vector V3=Vector(v3.x,v3.y,v3.z);
+	
+	Vector Vadd=sub(V1,V2);
+	Vector Vsub=sub(V1,V3);
+	
+	Vector Cross=cross_product(Vadd,Vsub);
+	
+	
+	float val  = Cross.norm();
+
+	fnorm[fCnt].x = Cross.getX()/val;
+	fnorm[fCnt].y = Cross.getY()/val;
+	fnorm[fCnt].z = Cross.getZ()/val;
+	
+	
+	vnorm[faces[fCnt].v1].x+=fnorm[fCnt].x;
+	vnorm[faces[fCnt].v2].x+=fnorm[fCnt].x;
+	vnorm[faces[fCnt].v3].x+=fnorm[fCnt].x;
+	
+	
+	vnorm[faces[fCnt].v1].y+=fnorm[fCnt].y;
+	vnorm[faces[fCnt].v2].y+=fnorm[fCnt].y;
+ 	vnorm[faces[fCnt].v3].y+=fnorm[fCnt].y;
+
+	vnorm[faces[fCnt].v1].z+=fnorm[fCnt].z;
+	vnorm[faces[fCnt].v2].z+=fnorm[fCnt].z;
+	vnorm[faces[fCnt].v3].z+=fnorm[fCnt].z;
+	
+	vnorm[faces[fCnt].v1].n+=1.0;
+	vnorm[faces[fCnt].v2].n+=1.0;
+ 	vnorm[faces[fCnt].v3].n+=1.0;
+	
+	
+}
+/**************************************************************************************************/
+void nrmlinit()
+{
+	int m;
+	for(m=0;m<number_of_vertices;m++)
+	{
+		vnorm[m].x=vnorm[m].y=vnorm[m].z=vnorm[m].z=0;
+	}
+}
+void Normalize() {
+			int i = 0;
+			float normalizingFactor = 0.0;
+			normalizingFactor = sqrt(origin.x * origin.x + origin.y * origin.y + origin.z * origin.z);
+			maxZ /= normalizingFactor;
+			for (i = 0; i < number_of_vertices; i++) {
+
+				vertices[i].x /= normalizingFactor;
+				vertices[i].y /= normalizingFactor;
+				vertices[i].z /= normalizingFactor;
+
+				if (maxZ < vertices[i].z)
+					maxZ = vertices[i].z;
+				if (maxX < vertices[i].x)
+					maxX = vertices[i].x;
+				if (maxY < vertices[i].y)
+					maxY = vertices[i].y;
+				if (minX > vertices[i].x)
+					minX = vertices[i].x;
+				if (minY > vertices[i].y)
+					minY = vertices[i].y;
+				if (minZ > vertices[i].z)
+					minZ = vertices[i].z;
+			}
+			
+			origin.x /= normalizingFactor;
+			origin.y /= normalizingFactor;
+			origin.z /= normalizingFactor;
+
+		}
+
+/*********************************************Loading the File**************************************************/
+void load(char *filename)
+{
+        int endHeader=0,endVertex=0;
+        int temp=0;
+        char str[300],s1[30],s2[30];
+        FILE *file = fopen(filename,"r");
+        int i=0;
+		int j=1;
+		fseek(file,0,SEEK_END);
+		long filesize=ftell(file);
+//vertices=new Vertex[filesize];
+		vnorm=new VerNorm[filesize];
+//faces = new Face[filesize];
+		fnorm = new FacNorm[filesize];
+		fseek(file,0,SEEK_SET); 
+        
+	while (  strncmp( "element vertex", str,strlen("element vertex")) != 0  )
+			{
+				fgets(str,300,file);			// format
+			}
+	strcpy(str, str+strlen("element vertex"));
+	sscanf(str,"%i", &number_of_vertices);
+	vertices=new Vertex[filesize];
+	
+	fseek(file,0,SEEK_SET);
+	while (  strncmp( "element face", str,strlen("element face")) != 0  )
+			{
+				fgets(str,300,file);			// format
+			}
+	strcpy(str, str+strlen("element face"));
+	sscanf(str,"%i", &number_of_faces);
+	faces = new Face[filesize];
+	
+	while (  strncmp( "end_header", str,strlen("end_header")) != 0  )
+			{
+				fgets(str,300,file);			// format
+			}
+	
+	for(int i=0;i<number_of_vertices;i++)
+		{
+			fgets(str,300,file);
+			sscanf(str,"%f %f %f %f %f",&vertices[i].x , &vertices[i].y ,  &vertices[i].z ,  &vertices[i].confidence  ,  &vertices[i].intensity);
+			origin.x+=vertices[i].x;
+			origin.y+=vertices[i].y;
+			origin.z+=vertices[i].z;
+			if (maxZ < vertices[i].z)
+					maxZ = vertices[i].z;
+			if (maxX < vertices[i].x)
+					maxX = vertices[i].x;
+			if (maxY < vertices[i].y)
+					maxY = vertices[i].y;
+			if (minX > vertices[i].x)
+					minX = vertices[i].x;
+			if (minY > vertices[i].y)
+					minY = vertices[i].y;
+			if (minZ > vertices[i].z)
+					minZ = vertices[i].z;
+		}
+		origin.x/=number_of_vertices;
+		origin.y/=number_of_vertices;
+		origin.z/=number_of_vertices;
+		Normalize();
+		cameraDistance = maxZ - (origin.z);
+
+			cameraDistance = cameraDistance * 5;
+			moveX = -1 * origin.x;
+			moveY = -1 * origin.y;
+	nrmlinit();
+	for(int j=0;j<number_of_faces;j++)
+		{
+			fgets(str,300,file);
+			sscanf(str,"%d %d %d %d ",&temp,&faces[j].v1,&faces[j].v2,&faces[j].v3);
+			calculateNormal(j,vertices[faces[j].v1],vertices[faces[j].v2],vertices[faces[j].v3]);
+		}
+	fclose(file);
+	cout << "load ok";
+}
+/****************************************Reshaping the window**********************************************/
+void Reshape(int width, int height) {
+			windW = width;
+			windH = height;
+			glViewport(0, 0, windW, windH);
+			// Set viewing frustum
+			glMatrixMode(GL_PROJECTION);
+			glLoadIdentity();
+			gluPerspective(45, (float) width / height, 0.001f, 80);
+
+			// Modelview matrix reset
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
+		}
+/********************************************************************************************************/
+void selectLight(GLenum which, int value, char **label) {
+			glEnable(which);
+			switch (value) {
+			case LIGHT_OFF:
+				*label = "off";
+				glDisable(which);
+				break;
+			case LIGHT_RED:
+				*label = "red";
+				glLightfv(which, GL_DIFFUSE, red_light);
+				break;
+			case LIGHT_WHITE:
+				*label = "white";
+				glLightfv(which, GL_DIFFUSE, white_light);
+				break;
+			case LIGHT_GREEN:
+				*label = "green";
+				glLightfv(which, GL_DIFFUSE, green_light);
+				break;
+			}
+			glutPostRedisplay();
+		}
+
+void shadingSelect(int value) {
+			glShadeModel(value);
+			glutPostRedisplay();
+		}
+
+void normalsSelect(int value) {
+
+			usePerVertexNormals = value;
+			glutPostRedisplay();
+		}
+
+void changeRotation(int value) {
+
+			if (value == 0)
+				automaticRotate = 0;
+			if (value == 1)
+				automaticRotate = 1;
+			if (value == 2)
+				withLight = 1;
+			if (value == 3)
+				withLight = 0;
+
+		}
+
+void changeLeftLight(int value) {
+			selectLight(GL_LIGHT0, value, &left_light);
+		}
+
+void changeRightLight(int value) {
+			selectLight(GL_LIGHT1, value, &right_light);
+		}
+
+void changeFrontLight(int value) {
+			switch (value) {
+			case LIGHT_OFF:
+				glDisable(GL_LIGHT2);
+				break;
+			case LIGHT_RED:
+				glLightfv(GL_LIGHT2, GL_AMBIENT, red_light);
+				break;
+			case LIGHT_WHITE:
+				glLightfv(GL_LIGHT2, GL_AMBIENT, white_light);
+				break;
+			case LIGHT_GREEN:
+				glLightfv(GL_LIGHT2, GL_AMBIENT, green_light);
+				break;
+			}
+			glutPostRedisplay();
+		}
+
+void main_menu_select(int value) {
+			if (value == 666)
+				exit(0);
+			glShadeModel(shade_model = value);
+			glutPostRedisplay();
+		}
+
+void Init() 
+{
+	int shadingMenu, leftLightMenu, rightLightMenu, frontLightMenu, normalMenu, rotateMenu;
+	origin.x=0;
+	origin.y=0;
+	origin.z=0;
+	origin.confidence=0;
+	origin.intensity=0;
+	rotateMenu = glutCreateMenu(changeRotation);
+	glutAddMenuEntry("Start", 1); 
+    glutAddMenuEntry("Stop", 0); 
+    glutAddMenuEntry("With Light", 2); 
+    glutAddMenuEntry("Without Light", 3);
+    
+    normalMenu = glutCreateMenu(normalsSelect);
+    glutAddMenuEntry("Per Vertex", 1); 
+    glutAddMenuEntry("Per Fragment", 0);
+    
+    shadingMenu = glutCreateMenu(shadingSelect);
+    glutAddMenuEntry("Flat", GL_FLAT);
+    glutAddMenuEntry("Smooth", GL_SMOOTH);
+    
+    leftLightMenu = glutCreateMenu(changeLeftLight);
+    glutAddMenuEntry("Disable", LIGHT_OFF); 
+    glutAddMenuEntry("Red", LIGHT_RED); 
+    glutAddMenuEntry("White", LIGHT_WHITE); 
+    glutAddMenuEntry("Green", LIGHT_GREEN);
+    
+    rightLightMenu = glutCreateMenu(changeRightLight);
+    glutAddMenuEntry("Disable", LIGHT_OFF); 
+    glutAddMenuEntry("Red", LIGHT_RED); 
+    glutAddMenuEntry("White", LIGHT_WHITE); 
+    glutAddMenuEntry("Green", LIGHT_GREEN);
+    
+    frontLightMenu = glutCreateMenu(changeFrontLight);
+    glutAddMenuEntry("Disable", LIGHT_OFF); 
+    glutAddMenuEntry("Red", LIGHT_RED); 
+    glutAddMenuEntry("White", LIGHT_WHITE); 
+    glutAddMenuEntry("Green", LIGHT_GREEN);
+    
+			glutCreateMenu(main_menu_select);
+			glutAddSubMenu("Shading", shadingMenu);
+			glutAddSubMenu("Normals", normalMenu);
+			glutAddSubMenu("Rotate", rotateMenu);
+			glutAddSubMenu("Left light", leftLightMenu);
+			glutAddSubMenu("Right light", rightLightMenu);
+			glutAddSubMenu("Front light", frontLightMenu);
+			glutAddMenuEntry("Quit", 666);
+			glutAttachMenu(GLUT_RIGHT_BUTTON);
+
+			glLightfv(GL_LIGHT0, GL_POSITION, left_light_position);
+			glLightfv(GL_LIGHT0, GL_SPECULAR, white_light);
+			glLightfv(GL_LIGHT1, GL_POSITION, right_light_position);
+			glLightfv(GL_LIGHT1, GL_SPECULAR, white_light);
+			glLightfv(GL_LIGHT2, GL_POSITION, front_light_position);
+			glLightfv(GL_LIGHT2, GL_AMBIENT, white_light);
+
+			changeLeftLight(LIGHT_WHITE);
+			changeRightLight(LIGHT_WHITE);
+			changeFrontLight(LIGHT_WHITE);
+
+			glMaterialfv(GL_FRONT, GL_AMBIENT, white_ambient);
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, white_diffuse);
+			glMaterialfv(GL_FRONT, GL_SPECULAR, white_specular);
+			glMaterialf(GL_FRONT, GL_SHININESS, white_shininess);
+
+			glEnable(GL_LIGHTING);
+			glEnable(GL_DEPTH_TEST);
+			glEnable(GL_NORMALIZE);
+			glEnable(GL_BLEND);
+}
+/******************************using Quaternions**************************************************/
+
+void Rotation_by_quaternions(float angle,float x , float y,float z)
+{
+			Vector v =Vector(x,y,z);
+	
+			Quaternion q= make_rotation_quaternion_from_axis_and_angle(angle,v);
+			glMultMatrixd(quaternion_rotation_matrix(q));
+	}
+/*******************************Drawing**************************************************/
+void LoadTextures(void) {
+
+	load("bunny.ply");
+
+	skinImg = SOIL_load_image("skin.jpg", &imgWidth, &imgHeight, 0, SOIL_LOAD_AUTO);
+
+	glGenTextures(1, &textureIDSkin);
+
+	glBindTexture(GL_TEXTURE_2D, textureIDSkin);
+
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGB, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, skinImg);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+
+	SOIL_free_image_data(skinImg);
+
+
+
+	imageSize = imgWidth * imgHeight;
+
+}
+
+void draw()
+{
+	int ver1,ver2,ver3;
+	GLfloat Xinc = minX;
+	GLfloat Yinc = minY;
+
+	GLfloat Ydiff = 0.0;
+
+	GLfloat scale = 0.1f;
+
+	glBindTexture(GL_TEXTURE_2D, textureIDSkin);
+    	
+	for(int j=0;j<number_of_faces;j++){
+			ver1=faces[j].v1;
+			ver2=faces[j].v2;
+			ver3=faces[j].v3;
+    	
+			glBegin(GL_TRIANGLES);
+				glNormal3f((vnorm[ver1].x/vnorm[ver1].n),
+					(vnorm[ver1].y/vnorm[ver1].n),
+					(vnorm[ver1].z/vnorm[ver1].n));
+				Ydiff = (vertices[ver1].y - Yinc) * scale;
+				glTexCoord2f((vertices[ver1].x - Xinc) * scale, Ydiff);
+				glVertex3f(vertices[ver1].x,vertices[ver1].y,vertices[ver1].z);
+				glNormal3f((vnorm[ver2].x/vnorm[ver2].n),
+					(vnorm[ver2].y/vnorm[ver2].n),
+					(vnorm[ver2].z/vnorm[ver2].n));
+				Ydiff = (vertices[ver2].y - Yinc) * scale;
+				glTexCoord2f((vertices[ver2].x - Xinc) * scale, Ydiff);
+				glVertex3f(vertices[ver2].x,vertices[ver2].y,vertices[ver2].z);
+				glNormal3f((vnorm[ver3].x/vnorm[ver3].n),
+					(vnorm[ver3].y/vnorm[ver3].n),
+					(vnorm[ver3].z/vnorm[ver3].n));
+				Ydiff = (vertices[ver3].y - Yinc) * scale;
+				glTexCoord2f((vertices[ver3].x - Xinc) * scale, Ydiff);
+				glVertex3f(vertices[ver3].x,vertices[ver3].y,vertices[ver3].z);
+			glEnd();
+			
+		}
+	
+}    
+
+void render()
+{
+			float moveZ = -1 * origin.z;
+
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glDisable(GL_LIGHTING);
+			glPushMatrix();
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
+
+			GLdouble rollSquare = leftLightZ * leftLightZ - lightPitch * lightPitch;
+			if (rollSquare < 0)
+				rollSquare *= -1;
+			GLdouble roll = sqrt(rollSquare);
+
+			if (withLight) {
+				left_light_position[0] = lightPitch;
+				left_light_position[2] = op * roll;
+				glLightfv(GL_LIGHT0, GL_POSITION, left_light_position);
+			}
+
+			gluLookAt(0, 0, cameraDistance, 0, 0, 0, 0, 1, 0);
+
+			
+			Rotation_by_quaternions(yaw / 10, 1, 0, 0);
+			
+			Rotation_by_quaternions(pitch / 10, 0, 1, 0);
+
+			glTranslatef(moveX, moveY, moveZ);
+
+			glScalef(zoom, zoom, zoom);
+			glEnable(GL_LIGHTING);
+			draw();
+			glPopMatrix();
+			glutSwapBuffers();
+
+		}
+
+
+
+/***********************************************************************/
+void Key(unsigned char key, int x, int y) {
+
+			switch (key) {
+			case '+':
+				zoom /= 0.75;
+				glutPostRedisplay();
+				break;
+			case '-':
+				zoom *= 0.75;
+				glutPostRedisplay();
+				break;
+			case 'l':
+				withLight ^= 1;
+				glutPostRedisplay();
+				break;
+			
+			case 27:
+				exit(0);
+			};
+		}
+/*******************************************************************/
+void mouse(int button, int state, int x, int y) {
+			newX = x;
+			newY = y;
+
+			// Left mouse button pressed
+			if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+				LeftButtonDown = 1;
+				ShiftLeftButtonDown = (glutGetModifiers() == GLUT_ACTIVE_SHIFT);
+			} else if (button == GLUT_MIDDLE_BUTTON && state == GLUT_DOWN) {
+				MiddleButtonDown = 1;
+			} else {
+				MiddleButtonDown = ShiftLeftButtonDown = LeftButtonDown = 0;
+			}
+		}
+
+void motion(int x, int y) {
+			float RelX, RelY;
+
+			oldX = newX;
+			oldY = newY;
+			newX = x;
+			newY = y;
+
+			RelX = (newX - oldX) / (float) glutGet((GLenum) GLUT_WINDOW_WIDTH);
+			RelY = (newY - oldY) / (float) glutGet((GLenum) GLUT_WINDOW_HEIGHT);
+
+			if (ShiftLeftButtonDown) {
+				// Change distance
+				cameraDistance += 100 * RelY;
+
+			} else if (LeftButtonDown) {
+				// Change Rotation
+				pitch += (RelX * 180);
+				yaw += (RelY * 180);
+			} else if (MiddleButtonDown) {
+				// Translate
+				moveX += RelX * 2;
+				moveY -= RelY * 2;
+			}
+
+			glutPostRedisplay();
+		}
+/*******************************************************************************/
+
+
+
+/***************************************************************************************************/
+int main(int argc, char** argv)
+{
+	
+			
+			glutInit(&argc, argv);
+			glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE | GLUT_DEPTH);
+			glutCreateWindow("Ply File Rendering");
+			LoadTextures();
+			glutReshapeWindow(windW, windH);
+			Init();
+			glutReshapeFunc(Reshape);
+			glutKeyboardFunc(Key);
+			glutDisplayFunc(render);
+			glutMouseFunc(mouse);
+			glutMotionFunc(motion);
+			glLightfv(GL_LIGHT0, GL_POSITION, left_light_position);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, white_light);
+	glLightfv(GL_LIGHT1, GL_POSITION, right_light_position);
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, white_light);
+
+	glEnable(GL_LIGHT0);
+	glEnable(GL_LIGHT1);
+
+	glEnable(GL_LIGHTING);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_NORMALIZE);
+	glEnable(GL_TEXTURE_2D);
+
+	glShadeModel(GL_SMOOTH);
+
+
+	glutMainLoop();
+
+			
+			return 0;
+		}

@@ -1,0 +1,21 @@
+Assignment_1 prepared by Abhijit Bagchi(MT2013001)
+
+1)The program would have to be started by running the makefile using the compand make.
+
+2)The user can choose the points by the use of the mouse.i.e using the left mouse button.
+
+3)After clicking on the mouse clicks the users would have to choose the algorithm which is supposed to be used 
+  the algorithm can be choosed by the either using the 'b' or 'd' for Bernstein polynomial and De CastelJau Algorithm respectively.
+
+4)The actual curve is drawn on the right click of the mouse.
+
+5)The redraw functionality is also present in the program, as soon as new point are added the bezeir curve disappear and whenever the right 
+  button of the mouse is clicked again the curve is redrawn.
+
+6)The elementary glrotate, glscale and gltranslate functionality is implemented on the redrawing the curve by corresponding 'r', 's' and 't' 
+  button of the keyboard respectively. The glorate, glscale and gltranslate as a factor on the redraw functionality. On each redraw the curve is rotate is rotated
+  on the z-axis by a 5 degree with respect to the previous drawn curve, similarly the curve is scale by a factor of 1.1  and translated to a coordinate 
+  system where  the x-axis is translated by 1 unit on every redraw with respect to the previous curve's coordinate system.
+
+
+  

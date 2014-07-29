@@ -1,0 +1,11 @@
+#include "../Headers/Mesh.h"
+
+int main(int argc, char** argv)
+{
+	Mesh *s = new Mesh();
+	s->loadMeshPLY(argv[1]);
+	s->triangulate();
+	s->createEdgeStruct();
+	s->subdivide();
+	return 0;
+}

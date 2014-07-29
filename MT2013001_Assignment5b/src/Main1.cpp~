@@ -1,0 +1,153 @@
+#include <iostream>
+#include <fstream>
+#include "../Header/Mesh.h"
+#include <GL/glut.h>
+using namespace std;
+
+Mesh *smesh,*cmesh;
+int numVert;
+int level = 0;  //subdivision level
+float scale = 0.0;
+bool mouseLeft = false;
+int newX,newY,oldX,oldY;
+vector<int> vertInd1, vertInd2, vertNewIndx;
+float r_x , r_y;
+float pitch = 45.0,yaw =-10.0;
+float moveX=0.0,moveY = 0.0,moveZ = 0.0;
+int control =0;
+/**********************************lighting*****************************/
+	float left_light_position[] = { 10.0, 0.0, -5.0, 0.0 };
+	float right_light_position[] = { -10.0, 0.0, -5.0, 1.0 };
+	float front_light_position[] = { 0.0, 0.0, -10.0, 1.0 };
+	
+	GLfloat white_ambient[] = { 0.2, 0.2, 0.2, 1.0 }, white_diffuse[] = { 0.5, 0.5, 0.5, 1.0 }, white_specular[] = { 0.3, 0.3, 0.3, 1.0 }, white_shininess = 65.0;
+
+//---Reads data file and initializes drawing parameters ------------------
+void initialise(char *filename)
+{
+	smesh = new Mesh();
+	smesh->load_mesh(filename);
+	smesh->triangulation();
+	smesh->make_edges();
+	smesh->make_neighbours();
+	
+	
+	cmesh = new Mesh();
+	cmesh->load_mesh(filename);
+	
+    	glLightfv(GL_LIGHT0, GL_POSITION, left_light_position);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, white_light);
+	glLightfv(GL_LIGHT1, GL_POSITION, right_light_position);
+	glLightfv(GL_LIGHT1, GL_SPECULAR, white_light);
+	glLightfv(GL_LIGHT2, GL_POSITION, front_light_position);
+	glLightfv(GL_LIGHT2, GL_AMBIENT, white_light);
+
+	glMaterialfv(GL_FRONT, GL_AMBIENT, white_ambient);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, white_diffuse);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, white_specular);
+	glMaterialf(GL_FRONT, GL_SHININESS, white_shininess);
+
+	glEnable(GL_LIGHTING);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_NORMALIZE);
+	glEnable(GL_BLEND);
+
+	}
+
+	//---- Display:  The main display module ----------------------------------
+	void display()
+	{
+	   	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glDisable(GL_LIGHTING);
+		glPushMatrix();
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+
+		glRotatef(pitch, 0, 1, 0);
+		glRotatef(yaw, 1, 0, 0);
+		glColor3f(1.,0.5,0.5);
+		glScalef(scale,scale,scale);
+		glTranslatef(moveX,moveY,moveZ);
+		glEnable(GL_LIGHTING);
+		if(control == 0)
+		smesh->draw();
+		else
+		cmesh->draw();
+		glPopMatrix();
+		glutSwapBuffers();
+	}
+
+	//-- Callback function for processing keyboard events --------------------
+	void keyboard(unsigned char key, int x, int y)
+	{
+		if (key == ' ' && level < 4)
+		{
+			smesh->subdivide();
+			level++;
+		}
+		if (key == '+')
+		 scale *=2;
+		if (key == 'a')
+		moveX -= 1;
+		if (key == 'd')
+		moveX += 1;
+		if (key == 's')
+		moveY -= 1;
+		if (key == 'w')
+		moveY += 1;
+		if(key == 'c')
+		control = 1;
+		glutPostRedisplay();
+	}
+
+	//-- Callback function for processing special keyboard events --------------
+	
+	
+	void mouse(int button, int state, int mouseX, int mouseY)
+	{
+	
+	newX = mouseX;
+	newY = mouseY;
+	if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+		{
+		mouseLeft = true;
+		}
+	else
+		{
+		mouseLeft = false;
+		}
+	}
+	void motion(int x,int y)
+	{
+		oldX = newX;
+		oldY = newY;
+		newX=x;
+		newY=y;
+		if(mouseLeft)
+		{
+			r_x = (newX - oldX) / (float) glutGet((GLenum) GLUT_WINDOW_WIDTH);
+			r_y = (newY - oldY) / (float) glutGet((GLenum) GLUT_WINDOW_HEIGHT);
+			pitch += (r_x * 180);
+			yaw += (r_y * 180);
+		}
+	
+	
+	}
+
+	//------- Main: Initialize glut window and register call backs -------------
+	int main(int argc, char** argv)
+	{
+	   glutInit(&argc, argv);
+	   glutInitDisplayMode (GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH);
+	   glutInitWindowSize (500, 500);
+	   glutInitWindowPosition (10, 10);
+	   glutCreateWindow ("Loop Subdivision");
+	   initialise (argv[1]);
+
+	   glutDisplayFunc(display);
+	   glutKeyboardFunc(keyboard);
+	   glutMouseFunc(mouse);
+	   glutMotionFunc(motion);
+	   glutMainLoop();
+	   return 0;
+	}

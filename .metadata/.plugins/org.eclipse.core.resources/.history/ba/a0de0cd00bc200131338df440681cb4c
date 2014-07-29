@@ -1,0 +1,118 @@
+#include <iostream>
+#include <fstream>
+#include "../Headers/Mesh.h"
+#include <GL/glut.h>
+#include <GL/glui.h>
+using namespace std;
+
+Mesh *mesh;
+
+int level = 0;  //subdivision level
+int   main_window;
+float scale  = 3.0;
+float moveX = 0.0;
+float moveY = 0.0;
+
+GLfloat light0_ambient[] =  {0.1f, 0.1f, 0.3f, 1.0f};
+GLfloat light0_diffuse[] =  {.6f, .6f, 1.0f, 1.0f};
+GLfloat light0_position[] = {.5f, .5f, 1.0f, 0.0f};
+
+GLfloat lights_rotation[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
+
+float view_rotate[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
+
+GLUI *glui;
+
+//---Reads data file and initializes drawing parameters ------------------
+void initialise()
+{
+	mesh = new Mesh();
+	cout<< " loading";
+	mesh->loadMeshPLY("cube.ply");
+	mesh->triangulate();
+	mesh->createEdgeStruct();
+    mesh->setColorAmbientDiffuse(1.0, 0.5, 0.5);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_DEPTH_TEST);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f); 	
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(-2., 2., -2., 2., -2., 2.);
+}
+
+//---- Display:  The main display module ----------------------------------
+void display()  
+{
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();  	
+    glLightfv(GL_LIGHT0, GL_POSITION, light0_position);
+
+	glColor3f(1.,0.,0.);
+	glScalef(scale,scale,scale);
+	glTranslatef(moveX,0,0);
+	glTranslatef(0,moveY,0);
+	mesh->render();
+	glFlush();
+}
+
+//-- Callback function for processing keyboard events -------------------- 
+void myGlutKeyboard(unsigned char key, int x, int y)
+{
+	if (key == ' ' && level < 4)
+	{
+		mesh->subdivide();
+		level++;
+	}
+	else if(key == 'w' || key == 'W') {glDisable(GL_LIGHTING); glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);}
+	else if(key == 's' || key == 'S') {glEnable(GL_LIGHTING); glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);}
+	else if(key == '+' ) scale = scale + 0.2;
+	else if(key == 'j')	 moveX -= 0.2;
+	else if(key == 'l') moveX += 0.2;
+	else if(key == 'i')	 moveY -= 0.2;
+	else if(key == 'm') moveY += 0.2;
+	glutPostRedisplay();
+}
+
+void myGlutMotion(int x, int y )
+{
+  glutPostRedisplay();
+}
+
+void myGlutMouse(int button, int button_state, int x, int y )
+{
+}
+
+//------- Main: Initialize glut window and register call backs -------------
+int main(int argc, char** argv)
+{
+	cout<<"starting ";
+   glutInit(&argc, argv);
+   glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH );
+   glutInitWindowSize (500, 500); 
+   glutInitWindowPosition (10, 10);
+   main_window = glutCreateWindow ("Loop Subdivision");
+   initialise ();
+
+   glutDisplayFunc(display); 
+
+   GLUI_Master.set_glutKeyboardFunc( myGlutKeyboard );
+   GLUI_Master.set_glutSpecialFunc( NULL );
+   GLUI_Master.set_glutMouseFunc( myGlutMouse );
+
+   glEnable(GL_LIGHTING);
+     glEnable( GL_NORMALIZE );
+
+     glEnable(GL_LIGHT0);
+     glLightfv(GL_LIGHT0, GL_AMBIENT, light0_ambient);
+     glLightfv(GL_LIGHT0, GL_DIFFUSE, light0_diffuse);
+     glLightfv(GL_LIGHT0, GL_POSITION, light0_position);
+
+     glEnable(GL_DEPTH_TEST);
+     glui = GLUI_Master.create_glui_subwindow( main_window,GLUI_SUBWINDOW_RIGHT );
+   glutMainLoop();
+   return 0;
+}

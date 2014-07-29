@@ -1,0 +1,104 @@
+#include <iostream>
+#include <fstream>
+#include "../Headers/Mesh.h"
+#include <GL/glut.h>
+#include <GL/glui.h>
+using namespace std;
+
+Mesh *mesh;
+
+int level = 0;  //subdivision level
+int main_window;
+float lookAngle_x = 60.0, lookAngle_y = 0.0;
+float scale  = 3.0;
+float moveX = 0.0;
+float moveY = 0.0;
+
+float lgt_pos[]={5.0f, 10.0f, 10.0f, 1.0f};
+
+GLUI *glui;
+
+//---Reads data file and initializes drawing parameters ------------------
+void initialise()
+{
+	mesh = new Mesh();
+	cout<< " loading";
+	mesh->loadMeshPLY("cube.ply");
+	mesh->triangulate();
+	mesh->createEdgeStruct();
+    mesh->setColorAmbientDiffuse(1.0, 0.5, 0.5);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_DEPTH_TEST);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(-2., 2., -2., 2., -2., 2.);
+}
+
+//---- Display:  The main display module ----------------------------------
+void display()  
+{
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();  	
+    glLightfv(GL_LIGHT0, GL_POSITION, lgt_pos);
+
+	glRotatef(lookAngle_y, 0, 1, 0);
+	glRotatef(lookAngle_x, 1, 0, 0);
+	glColor3f(1.,0.,0.);
+	glScalef(scale,scale,scale);
+	glTranslatef(moveX,0,0);
+	glTranslatef(0,moveY,0);
+	mesh->render();
+	glFlush();
+}
+
+//-- Callback function for processing keyboard events -------------------- 
+void keyboard(unsigned char key, int x, int y)
+{
+	if (key == ' ' && level < 4)
+	{
+		mesh->subdivide();
+		level++;
+	}
+	else if(key == 'w' || key == 'W') {glDisable(GL_LIGHTING); glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);}
+	else if(key == 's' || key == 'S') {glEnable(GL_LIGHTING); glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);}
+	else if(key == '+' ) scale = scale + 0.2;
+	else if(key == 'j')	 moveX -= 0.2;
+	else if(key == 'l') moveX += 0.2;
+	else if(key == 'i')	 moveY -= 0.2;
+	else if(key == 'm') moveY += 0.2;
+	glutPostRedisplay();
+}
+
+//-- Callback function for processing special keyboard events --------------
+void special(int key, int x, int y)
+{
+	if(key == GLUT_KEY_LEFT) lookAngle_y -= 5.0;
+	else if(key == GLUT_KEY_RIGHT) lookAngle_y += 5.0;
+	if(key == GLUT_KEY_UP) lookAngle_x -= 5.0;
+	else if(key == GLUT_KEY_DOWN) lookAngle_x += 5.0;
+	glutPostRedisplay();
+}
+
+//------- Main: Initialize glut window and register call backs -------------
+int main(int argc, char** argv)
+{
+	cout<<"starting ";
+   glutInit(&argc, argv);
+   glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH );
+   glutInitWindowSize (500, 500); 
+   glutInitWindowPosition (10, 10);
+   /*main_window */ glutCreateWindow ("Loop Subdivision");
+   initialise ();
+
+   glutDisplayFunc(display); 
+   glutKeyboardFunc(keyboard);
+   glutSpecialFunc(special);
+   //glui = GLUI_Master.create_glui( "GLUI", 0, 400, 50 );
+   glutMainLoop();
+   return 0;
+}

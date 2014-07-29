@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
+		<item value="247" key="DIALOG_WIDTH"/>
+		<item value="105" key="DIALOG_Y_ORIGIN"/>
+		<item value="688" key="DIALOG_X_ORIGIN"/>
+		<item value="432" key="DIALOG_HEIGHT"/>
+		<item value="1|Bitstream Charter|9.0|0|GTK|1|" key="DIALOG_FONT_NAME"/>
+	</section>
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
+		<item value="false" key="wrap"/>
+		<item value="true" key="casesensitive"/>
+		<item value="false" key="isRegEx"/>
+		<item value="false" key="incremental"/>
+		<item value="false" key="wholeword"/>
+		<item value="Vertex" key="selection"/>
+		<list key="findhistory">
+			<item value="HE_vert"/>
+			<item value="HE_Vertex"/>
+			<item value="HE_face"/>
+			<item value="HE_edge"/>
+			<item value="-&gt;z"/>
+			<item value="-&gt;y"/>
+			<item value="-&gt;x"/>
+			<item value="new faceNew"/>
+		</list>
+		<list key="replacehistory">
+			<item value="Vertex"/>
+			<item value="Face"/>
+			<item value="Edge"/>
+			<item value=".get_z()"/>
+			<item value=".get_y()"/>
+			<item value=".get_x()"/>
+			<item value="new Polygon"/>
+			<item value="Polygon*"/>
+		</list>
+	</section>
+</section>

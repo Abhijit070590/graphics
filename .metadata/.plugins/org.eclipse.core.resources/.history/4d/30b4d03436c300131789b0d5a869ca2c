@@ -1,0 +1,24 @@
+/*
+ * test.cpp
+ *
+ *  Created on: Apr 13, 2014
+ *      Author: abhijit
+ */
+
+
+
+
+#include "../Headers/Mesh.h"
+#include <iostream>
+
+int main(int argc, char** argv)
+{
+	Mesh *mesh = new Mesh();
+	mesh = new Mesh();
+		mesh->load_mesh("cube.ply");
+		mesh->triangulation();
+		mesh->make_edges();
+		mesh->make_neighbours();
+		mesh->subdivide();
+	return 0;
+}

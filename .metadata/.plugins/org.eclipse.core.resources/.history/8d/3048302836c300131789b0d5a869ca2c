@@ -1,0 +1,24 @@
+/*
+ * test.cpp
+ *
+ *  Created on: Apr 13, 2014
+ *      Author: abhijit
+ */
+
+
+
+
+#include "../Headers/Mesh.h"
+#include <iostream>
+
+int main(int argc, char** argv)
+{
+	Mesh *s = new Mesh();
+	s->loadMeshPLY(argv[1]);
+	s->triangulate();
+	std::cout<<"upto triangulation";
+	s->createEdgeStruct();
+	std::cout<<"upto subdivide";
+	s->subdivide();
+	return 0;
+}

@@ -1,0 +1,90 @@
+//  ========================================================================
+//  AUTHOR:  Ramakrishnan Mukundan
+//  BOOK:    Advanced Methods in Computer Graphics
+//           - With examples in OpenGL,  Springer, 2012.
+//
+//  FILE NAME: Mesh.h
+//  DESCRIPTION:
+//        This code is part of the supplementary material for Chapter 8
+//	      (Ref. Page 226)
+//        This is the header file for the Mesh class.
+//  ========================================================================
+//  THE SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS",  WITHOUT WARRANTY OF ANY
+//  KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+//  MERCHANTABILITY, FITNESS FOR A  PARTICULAR PURPOSE AND  NONINFRINGEMENT.
+//  IN NO EVENT SHALL  THE AUTHOR OR THE PUBLISHER BE LIABLE FOR  ANY CLAIM,
+//  DAMAGES OR  OTHER LIABILITY,  WHETHER IN AN  ACTION OF CONTRACT, TORT OR
+//  OTHERWISE, ARISING FROM,  OUT OF OR  IN CONNECTION  WITH THE SOFTWARE OR
+//  THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//  ========================================================================
+
+#if !defined(H_MESH)
+#define H_MESH
+
+#include <vector>
+#include <list>
+#include <string>
+using namespace std;
+
+struct Polygon
+{
+	int vert[4];
+};
+struct Vertex;
+struct Face;
+
+struct Edge
+{
+  Vertex* vert;
+  Face* face;
+  Edge* next;
+  Edge* prev;
+  Edge* pair;
+};
+
+struct Vertex
+{
+  float x;
+  float y;
+  float z;
+  int index;
+  Edge* edge;
+};
+
+struct Face
+{
+  Edge* edge;
+  int index;
+};
+
+class Mesh
+{
+public:
+   int _poly_size;
+	int _numVert, _numPoly;
+	vector<Polygon*> _polygons;
+    vector<Vertex*> _vertArray;
+    list<Face*> _faceList;
+    list<Edge*> _edgeList;
+	Mesh()
+		:  _numVert(0), _numPoly(0)
+	      {}
+	~Mesh() {}
+	int loadMeshOFF(const string& filename);
+	int loadMeshOBJ(const string& filename);
+	void loadMeshPLY(char* filename);
+	void render();
+	void triangulation();
+	void renderBV(float& xmin, float& xmax,
+		float& ymin, float& ymax, float& zmin, float& zmax);
+	void setColorAmbientDiffuse(float colorR, float colorG, float colorB) const;
+	void setColorSpecular(float colorR, float colorG, float colorB, float shininess) const;
+    void boundingVolume(float& xmin, float& xmax,
+		float& ymin, float& ymax, float& zmin, float& zmax);
+	void normal(Vertex* p1, Vertex* p2, Vertex* p3) const;
+	void createEdgeStruct();
+	void createEdgePairs();
+	vector<int> oneRingNbs(int vIndx) const;
+};
+
+#endif
